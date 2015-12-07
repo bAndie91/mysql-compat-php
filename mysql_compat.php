@@ -133,8 +133,8 @@ function mysql_compat_escape_string($string)
 
 function mysql_compat_fetch_array($result, $type)
 {
-	$typei = $type;
-	return mysqli_fetch_array($result, $typei);
+	$type_i = $type;
+	return mysqli_fetch_array($result, $type_i);
 }
 
 function mysql_compat_fetch_assoc($result)
@@ -333,19 +333,38 @@ function mysql_compat_real_escape_string($string, $link = NULL)
 	return mysqli_real_escape_string($link, $string);
 }
 
-function mysql_compat_result($result, $row_num, $field_def = 0)
+function mysql_compat_result($result, $row_num, $field_def = NULL)
 {
 	$dseek = mysql_compat_data_seek($result, $row_num);
 	if(!$dseek) return $dseek;
-	if(is_numeric($field_def))
+	if(!isset($field_def)) $field_def = 0;
+	unset($field_num);
+	if(preg_match('/^[0-9]+$/', $field_def))
 	{
 		$field_num = $field_def;
 	}
 	else
 	{
-		$field_num =
+		$fields = mysqli_fetch_fields($result);
+		if(!$fields) return $fields;
+		foreach($fields as $num => $field)
+		{
+			if($field->name == $field_def or $field->table.'.'.$field->name == $field_def)
+			{
+				$field_num = $num;
+				break;
+			}
+		}
+		if(!isset($field_num))
+		{
+			$trace = debug_backtrace();
+			trigger_error("mysql_compat_result(): $field_def not found in MySQL result in {$trace[0]['file']} on line {$trace[0]['line']}", E_USER_WARNING);
+			return false;
+		}
 	}
-	return mysql_compat_fetch_field($result, $field_num);
+	$record = mysql_compat_fetch_row($result);
+	if(!$record) return $record;
+	return $record[$field_num];
 }
 
 function mysql_compat_select_db($dbname, $link = NULL)
@@ -354,22 +373,47 @@ function mysql_compat_select_db($dbname, $link = NULL)
 	return mysqli_select_db($link, $dbname);
 }
 
-function mysql_compat_set_charset()
+function mysql_compat_set_charset($name, $link = NULL)
 {
+	if(!isset($link)) $link = $GLOBALS['mysql_compat_default_link'];
+	return mysqli_ser_charset($link, $name);
 }
 
-function mysql_compat_stat()
+function mysql_compat_stat($link = NULL)
 {
+	if(!isset($link)) $link = $GLOBALS['mysql_compat_default_link'];
+	return mysqli_stat($link);
 }
 
-function mysql_compat_tablename()
+function mysql_compat_tablename($tblist_result, $row_num)
 {
+	$seek = mysql_compat_data_seek($tblist_result, $row_num);
+	if($seek)
+	{
+		$array = mysql_compat_fetch_array($tblist_result);
+		if($array)
+		{
+			return $array[0];
+		}
+		else
+		{
+			return $array;
+		}
+	}
+	else
+	{
+		return $seek;
+	}
 }
 
-function mysql_compat_thread_id()
+function mysql_compat_thread_id($link = NULL)
 {
+	if(!isset($link)) $link = $GLOBALS['mysql_compat_default_link'];
+	return mysqli_thread_id($link);
 }
 
-function mysql_compat_unbuffered_query()
+function mysql_compat_unbuffered_query($query, $link = NULL)
 {
+	if(!isset($link)) $link = $GLOBALS['mysql_compat_default_link'];
+	return mysqli_query($link, $query, MYSQLI_USE_RESULT);
 }
