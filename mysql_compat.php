@@ -62,7 +62,7 @@ function mysql_compat_connect($server = NULL, $username = NULL, $password = NULL
 	if(!isset($password)) $password = ini_get("mysql.default_password");
 	$dbname = '';
 	$socket = NULL;
-	if(strpos($server, ':')>=0)
+	if(strpos($server, ':') !== false)
 	{
 		list ($host, $port) = explode(':', $server);
 		if($host == '')
